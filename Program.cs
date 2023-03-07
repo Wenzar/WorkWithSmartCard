@@ -3,54 +3,52 @@ using PCSC.Iso7816;
 using PCSC.Exceptions;
 using PCSC.Monitoring;
 using PCSC.Utils;
+using System.Collections.Generic;
 
 namespace MonitorReaderEvents
 {
     public class Program
     {
+        private const byte MSB = 0x00;
+        private const byte LSB = 0x08;
         public static void Main()
         {
             Console.WriteLine("This program will monitor all SmartCard readers and display all status changes.");
 
-            // Retrieve the names of all installed readers.
             var readerNames = "ACS ACR1281 1S Dual Reader PICC 0";
 
-            // if (IsEmpty(readerNames))
-            // {
-            //     Console.WriteLine("There are currently no readers installed.");
-            //     Console.ReadKey();
-            //     return;
-            // }
-
-            // Create smart-card monitor using a context factory. 
-            // The context will be automatically released after monitor.Dispose()
             using (var monitor = MonitorFactory.Instance.Create(SCardScope.System))
             {
                 AttachToAllEvents(monitor); // Remember to detach, if you use this in production!
 
-                //ShowUserInfo(readerNames);
-
                 monitor.Start(readerNames);
 
-                // Let the program run until the user presses CTRL-Q
+                // Let the program run until the user presses Shift-Q
                 while (true)
                 {
-                    var key = Console.ReadKey();
-                    if (ExitRequested(key))
+                    Console.WriteLine("");
+                    Console.WriteLine("[1] - Режим чтения");
+                    Console.WriteLine("[2] - Режим записи");
+                    Console.WriteLine("[3] - Считать UID");
+                    Console.WriteLine("[Shift-Q] - Выход");
+
+                    var key = Console.ReadKey(true);
+
+                    if (key.Key == ConsoleKey.D1)
                     {
-                        break;
+                        Console.WriteLine("Read_Mode");
+                        WorkWithCard(key);
                     }
 
-                    if (monitor.Monitoring)
+                    if (key.Key == ConsoleKey.D2)
                     {
-                        monitor.Cancel();
-                        Console.WriteLine("Monitoring paused. (Press CTRL-Q to quit)");
+                        Console.WriteLine("Write_Mode");
                     }
-                    else
-                    {
-                        monitor.Start(readerNames);
-                        Console.WriteLine("Monitoring started. (Press CTRL-Q to quit)");
-                    }
+
+                    if (key.Key == ConsoleKey.D3) WorkWithCard(key);
+
+                    if (ExitRequested(key)) break;
+
                 }
             }
         }
@@ -77,7 +75,6 @@ namespace MonitorReaderEvents
         private static void DisplayEvent(string eventName, CardStatusEventArgs unknown)
         {
             Console.WriteLine(">> {0} Event for reader: {1}", eventName, unknown.ReaderName);
-            if(eventName == "CardInserted") ReadUid();
             Console.WriteLine("State: {0}\n", unknown.State);
         }
 
@@ -87,11 +84,16 @@ namespace MonitorReaderEvents
             Console.WriteLine("Monitor exited due an error:");
             Console.WriteLine(SCardHelper.StringifyError(ex.SCardError));
         }
+        private static void KeyLoad()
+        {
 
-        private static void ReadUid()
+        }
+        private static void WorkWithCard(ConsoleKeyInfo key)
         {
             using (var context = ContextFactory.Instance.Establish(SCardScope.System))
             {
+
+
                 var readerName = "ACS ACR1281 1S Dual Reader PICC 0";
 
                 using (var isoReader = new IsoReader(
@@ -103,13 +105,46 @@ namespace MonitorReaderEvents
                 {
                     var card = new MifareCard(isoReader);
 
-                    var uid = card.GetData();
-                    Console.WriteLine("UID: {0}",
-                        (uid != null)
-                            ? BitConverter.ToString(uid)
-                            : '0');
+                    if (key.Key == ConsoleKey.D3)
+                    {
+                        try
+                        {
+                            var uid = card.GetData();
+                            Console.WriteLine("UID: {0}",
+                                (uid != null)
+                                    ? BitConverter.ToString(uid)
+                                    : throw new Exception("GET DATA failed."));
+                        }
+                        catch (Exception exception)
+                        {
+                            Console.Error.WriteLine("No card inserted in reader '{0}'.", readerName);
+                            Console.Error.WriteLine("Error message: {0} ({1})\n", exception.Message, exception.GetType());
+                        }
+                    }
 
+                    else
+                    {
+                        var loadKeySuccessful = card.LoadKey(KeyStructure.NonVolatileMemory, 0x00, new byte[] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF });
+
+                        if (!loadKeySuccessful)
+                        {
+                            throw new Exception("LOAD KEY failed.");
+                        }
+
+                        var authSuccessful = card.Authenticate(MSB, LSB, KeyType.KeyA, 0x00);
+                        if (!authSuccessful)
+                        {
+                            throw new Exception("AUTHENTICATE failed.");
+                        }
+
+                        // var result = card.ReadBinary(MSB, LSB, 16);
+                        // Console.WriteLine("Result (before BINARY UPDATE): {0}",
+                        //     (result != null)
+                        //         ? BitConverter.ToString(result)
+                        //         : null);
+                    }
                 }
+
             }
         }
 
@@ -117,7 +152,7 @@ namespace MonitorReaderEvents
             readerNames == null || readerNames.Count < 1;
 
         private static bool ExitRequested(ConsoleKeyInfo key) =>
-            key.Modifiers == ConsoleModifiers.Alt &&
+            key.Modifiers == ConsoleModifiers.Shift &&
             key.Key == ConsoleKey.Q;
 
     }
