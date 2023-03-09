@@ -44,7 +44,6 @@ namespace MonitorReaderEvents
             Debug.WriteLine($"Load Authentication Keys: {BitConverter.ToString(loadKeyCmd.ToArray())}");
             var response = _isoReader.Transmit(loadKeyCmd);
             Debug.WriteLine($"SW1 SW2 = {response.SW1:X2} {response.SW2:X2}");
-
             return IsSuccess(response);
         }
 
@@ -70,7 +69,7 @@ namespace MonitorReaderEvents
             Debug.WriteLine($"General Authenticate: {BitConverter.ToString(authKeyCmd.ToArray())}");
             var response = _isoReader.Transmit(authKeyCmd);
             Debug.WriteLine($"SW1 SW2 = {response.SW1:X2} {response.SW2:X2}");
-
+            Console.WriteLine(BitConverter.ToString(authKeyCmd.Data));
             Console.WriteLine($"SW1: = {response.SW1:X2}");
             Console.WriteLine($"SW2: = {response.SW2:X2}");
 
