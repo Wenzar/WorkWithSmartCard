@@ -1,0 +1,141 @@
+{
+  "version": 3,
+  "targets": {
+    "net6.0": {
+      "PCSC/6.1.3": {
+        "type": "package",
+        "compile": {
+          "lib/net6.0/PCSC.dll": {}
+        },
+        "runtime": {
+          "lib/net6.0/PCSC.dll": {}
+        }
+      },
+      "PCSC.Iso7816/6.1.3": {
+        "type": "package",
+        "dependencies": {
+          "PCSC": "6.1.3"
+        },
+        "compile": {
+          "lib/netstandard2.0/PCSC.Iso7816.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/PCSC.Iso7816.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "PCSC/6.1.3": {
+      "sha512": "Owbrhae5DAFUgg1gKiRNPjoG3Lr8FdsmlZl6RZnqs+QlWjZQr/2gzY6zYOiBa3L9H1UhMCqxL4I/yvaldelP/g==",
+      "type": "package",
+      "path": "pcsc/6.1.3",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "COPYING.txt",
+        "README.md",
+        "lib/net6.0/PCSC.dll",
+        "lib/net6.0/PCSC.pdb",
+        "lib/net6.0/PCSC.xml",
+        "lib/net7.0/PCSC.dll",
+        "lib/net7.0/PCSC.pdb",
+        "lib/net7.0/PCSC.xml",
+        "lib/netstandard2.0/PCSC.dll",
+        "lib/netstandard2.0/PCSC.pdb",
+        "lib/netstandard2.0/PCSC.xml",
+        "pcsc-sharp.png",
+        "pcsc.6.1.3.nupkg.sha512",
+        "pcsc.nuspec"
+      ]
+    },
+    "PCSC.Iso7816/6.1.3": {
+      "sha512": "fT9Jy+gNOOvZW1Gbyg38gc0pXNxaqachH2ssUvwkCocppQZONyiFrUkrezIokzDnVIZQWAiLEQzlrxFLNVU7mA==",
+      "type": "package",
+      "path": "pcsc.iso7816/6.1.3",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "COPYING.txt",
+        "README.md",
+        "lib/netstandard2.0/PCSC.Iso7816.dll",
+        "lib/netstandard2.0/PCSC.Iso7816.pdb",
+        "lib/netstandard2.0/PCSC.Iso7816.xml",
+        "pcsc-sharp.png",
+        "pcsc.iso7816.6.1.3.nupkg.sha512",
+        "pcsc.iso7816.nuspec"
+      ]
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net6.0": [
+      "PCSC >= 6.1.3",
+      "PCSC.Iso7816 >= 6.1.3"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\nesmachniy.m\\.nuget\\packages\\": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "c:\\Users\\nesmachniy.m\\Desktop\\Шаблоны\\щерук\\Csharp\\ReaderConnection\\ReaderConnection.csproj",
+      "projectName": "ReaderConnection",
+      "projectPath": "c:\\Users\\nesmachniy.m\\Desktop\\Шаблоны\\щерук\\Csharp\\ReaderConnection\\ReaderConnection.csproj",
+      "packagesPath": "C:\\Users\\nesmachniy.m\\.nuget\\packages\\",
+      "outputPath": "c:\\Users\\nesmachniy.m\\Desktop\\Шаблоны\\щерук\\Csharp\\ReaderConnection\\obj\\",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "C:\\Users\\nesmachniy.m\\AppData\\Roaming\\NuGet\\NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net6.0"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net6.0": {
+          "targetAlias": "net6.0",
+          "projectReferences": {}
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      }
+    },
+    "frameworks": {
+      "net6.0": {
+        "targetAlias": "net6.0",
+        "dependencies": {
+          "PCSC": {
+            "target": "Package",
+            "version": "[6.1.3, )"
+          },
+          "PCSC.Iso7816": {
+            "target": "Package",
+            "version": "[6.1.3, )"
+          }
+        },
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.100\\RuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

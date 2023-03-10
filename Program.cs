@@ -3,53 +3,66 @@ using PCSC.Iso7816;
 using PCSC.Exceptions;
 using PCSC.Monitoring;
 using PCSC.Utils;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MonitorReaderEvents
 {
     public class Program
     {
+        private const byte MSB = 0x00;
         public static void Main()
         {
-            Console.WriteLine("This program will monitor all SmartCard readers and display all status changes.");
-
-            // Retrieve the names of all installed readers.
-            var readerNames = "ACS ACR1281 1S Dual Reader PICC 0";
-
-            // if (IsEmpty(readerNames))
-            // {
-            //     Console.WriteLine("There are currently no readers installed.");
-            //     Console.ReadKey();
-            //     return;
-            // }
-
-            // Create smart-card monitor using a context factory. 
-            // The context will be automatically released after monitor.Dispose()
             using (var monitor = MonitorFactory.Instance.Create(SCardScope.System))
             {
-                AttachToAllEvents(monitor); // Remember to detach, if you use this in production!
-
-                //ShowUserInfo(readerNames);
-
-                monitor.Start(readerNames);
-
-                // Let the program run until the user presses CTRL-Q
-                while (true)
+                using (var context = ContextFactory.Instance.Establish(SCardScope.System))
                 {
-                    var key = Console.ReadKey();
-                    if (ExitRequested(key))
-                    {
-                        break;
-                    }
+                    Console.WriteLine("This program will monitor all SmartCard readers and display all status changes.");
 
-                    if (monitor.Monitoring)
+                    var readerNames = "ACS ACR1281 1S Dual Reader PICC 0";
+
+                    AttachToAllEvents(monitor); // Remember to detach, if you use this in production!
+
+                    monitor.Start(readerNames);
+
+                    using (var isoReader = new IsoReader(
+                        context: context,
+                        readerName: readerNames,
+                        mode: SCardShareMode.Shared,
+                        protocol: SCardProtocol.Any,
+                        releaseContextOnDispose: false))
                     {
-                        monitor.Cancel();
-                        Console.WriteLine("Monitoring paused. (Press CTRL-Q to quit)");
-                    }
-                    else
-                    {
-                        monitor.Start(readerNames);
-                        Console.WriteLine("Monitoring started. (Press CTRL-Q to quit)");
+                        var card = new MifareCard(isoReader);
+
+                        while (true)
+                        {
+                            Console.WriteLine("[1] - Загрузить ключ");
+                            Console.WriteLine("[2] - Аутентификация блока");
+                            Console.WriteLine("[3] - Чтение блока");
+                            Console.WriteLine("[4] - Запись блока");
+                            Console.WriteLine("[5] - Считать UID");
+                            Console.WriteLine("[Shift-Q] - Выход");
+
+
+                            byte keyNumber = 0;
+                            var key = Console.ReadKey(true);
+                            if (key.Key == ConsoleKey.D1) keyNumber = loadKey(card);
+                            if (key.Key == ConsoleKey.D2) AuthenticateBlock(card, keyNumber);
+                            if (key.Key == ConsoleKey.D3)
+                            {
+                                Console.WriteLine("Выберете блок для чтения:");
+                                ReadCard(card, Convert.ToByte(Console.ReadLine()));
+                            }
+                            if (key.Key == ConsoleKey.D4)
+                            {
+                                Console.WriteLine("Выберете блок для записи:");
+                                WriteCard(card, Convert.ToByte(Console.ReadLine()));
+                            }
+                            if (key.Key == ConsoleKey.D5) ReadUid(card);
+
+                            if (ExitRequested(key)) break;
+
+                        }
                     }
                 }
             }
@@ -61,8 +74,6 @@ namespace MonitorReaderEvents
             {
                 Console.WriteLine($"Start monitoring for reader {reader}.");
             }
-
-            Console.WriteLine("Press Ctrl-Q to exit or any key to toggle monitor.");
         }
 
         private static void AttachToAllEvents(ISCardMonitor monitor)
@@ -77,10 +88,8 @@ namespace MonitorReaderEvents
         private static void DisplayEvent(string eventName, CardStatusEventArgs unknown)
         {
             Console.WriteLine(">> {0} Event for reader: {1}", eventName, unknown.ReaderName);
-            if(eventName == "CardInserted") ReadUid();
             Console.WriteLine("State: {0}\n", unknown.State);
         }
-
 
         private static void MonitorException(object sender, PCSCException ex)
         {
@@ -88,36 +97,142 @@ namespace MonitorReaderEvents
             Console.WriteLine(SCardHelper.StringifyError(ex.SCardError));
         }
 
-        private static void ReadUid()
+        private static byte loadKey(MonitorReaderEvents.MifareCard card)
         {
-            using (var context = ContextFactory.Instance.Establish(SCardScope.System))
+            byte keyNum = chooseKeyNum();
+            bool loadKeySuccessful = card.LoadKey(KeyStructure.NonVolatileMemory, keyNum, scanKey(card, keyNum));
+
+            if (!loadKeySuccessful)
             {
-                var readerName = "ACS ACR1281 1S Dual Reader PICC 0";
+                throw new Exception("LOAD KEY failed.");
+            }
+            Console.WriteLine("Ключ успешно загружен\n");
+            return keyNum;
+        }
 
-                using (var isoReader = new IsoReader(
-                    context: context,
-                    readerName: readerName,
-                    mode: SCardShareMode.Shared,
-                    protocol: SCardProtocol.Any,
-                    releaseContextOnDispose: false))
+        private static byte chooseKeyNum()
+        {
+            byte result = 32; // кол-во ключей не более 1F
+            while (result == 32 || result > 31)
+            {
+                Console.WriteLine("Укажите номер ключа [0-31]:");
+                try
                 {
-                    var card = new MifareCard(isoReader);
-
-                    var uid = card.GetData();
-                    Console.WriteLine("UID: {0}",
-                        (uid != null)
-                            ? BitConverter.ToString(uid)
-                            : '0');
-
+                    result = Convert.ToByte(Console.ReadLine());
+                }
+                catch (Exception exception)
+                {
+                    Console.Error.WriteLine("Error message: {0} ({1})\n", exception.Message, exception.GetType());
                 }
             }
+            return result;
+        }
+
+        private static byte[] scanKey(MonitorReaderEvents.MifareCard card, byte keyNum)
+        {
+            string inputKeyValue = "0";
+            while (inputKeyValue.Length != 12 || Regex.IsMatch(inputKeyValue, @"[^a-fA-F0-9]"))
+            {
+                Console.WriteLine("Введите ключ [Формат HEX, 12 символов]:");
+                inputKeyValue = Console.ReadLine();
+                try
+                {
+                    if (inputKeyValue.Length != 12 || inputKeyValue == null || Regex.IsMatch(inputKeyValue, @"[^a-fA-F0-9]"))
+                    {
+                        throw new Exception("Invalid key format!");
+                    }
+                }
+                catch (Exception exception)
+                {
+                    Console.Error.WriteLine("Error message: {0} ({1})\n", exception.Message, exception.GetType());
+                }
+            }
+            return StringToByteArray(inputKeyValue);
+        }
+
+        private static void AuthenticateBlock(MonitorReaderEvents.MifareCard card, byte keyNumber)
+        {
+            Console.WriteLine("Выберете блок для Аутентификации:");
+            byte chosenBlock = Convert.ToByte(Console.ReadLine());
+            var authSuccessful = card.Authenticate(MSB, chosenBlock, KeyType.KeyA, keyNumber);
+            if (!authSuccessful)
+            {
+                throw new Exception("AUTHENTICATE failed.");
+            }
+            Console.WriteLine($"Блок: {0:X2} Аутентифицирован\n", chosenBlock);
+        }
+
+        private static void ReadCard(MonitorReaderEvents.MifareCard card, byte chosenBlock)
+        {
+            var result = card.ReadBinary(MSB, chosenBlock, 16);
+            Console.WriteLine("Значение в блока: {0}",
+                (result != null)
+                    ? BitConverter.ToString(result)
+                    : null);
+        }
+        private static void WriteCard(MonitorReaderEvents.MifareCard card, byte chosenBlock)
+        {
+            ReadCard(card, chosenBlock);
+            Console.WriteLine("Хотите перезаписать? y/n");
+            var key = Console.ReadKey(true);
+            if (key.Key == ConsoleKey.Y)
+            {
+
+                string inputValue = "0";
+                while (inputValue.Length != 32 || Regex.IsMatch(inputValue, @"[^a-fA-F0-9]"))
+                {
+                    Console.WriteLine("Введите данные для перезаписи [32 вимвола]");
+                    inputValue = Console.ReadLine();
+                    try
+                    {
+                        if (inputValue.Length != 32 || inputValue == null || Regex.IsMatch(inputValue, @"[^a-fA-F0-9]"))
+                        {
+                            throw new Exception("Invalid key format!");
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        Console.Error.WriteLine("Error message: {0} ({1})\n", exception.Message, exception.GetType());
+                    }
+                }
+                byte[] DATA_TO_WRITE = StringToByteArray(inputValue);
+
+                var updateSuccessful = card.UpdateBinary(MSB, chosenBlock, DATA_TO_WRITE);
+
+                if (!updateSuccessful)
+                {
+                    throw new Exception("UPDATE BINARY failed.");
+                }
+                Console.WriteLine("Запись прошла успешено\n");
+            }
+            else
+            {
+                Console.WriteLine("Перезапись отменена\n");
+            }
+        }
+
+        private static void ReadUid(MonitorReaderEvents.MifareCard card)
+        {
+            var uid = card.GetData();
+            Console.WriteLine("UID: {0}\n",
+                (uid != null)
+                    ? BitConverter.ToString(uid)
+                    : '0');
+        }
+
+        public static byte[] StringToByteArray(string hex)
+        {
+            return Enumerable.Range(0, hex.Length)
+                             .Where(x => x % 2 == 0)
+                             .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
+                             .ToArray();
         }
 
         private static bool IsEmpty(ICollection<string> readerNames) =>
             readerNames == null || readerNames.Count < 1;
 
         private static bool ExitRequested(ConsoleKeyInfo key) =>
-            key.Modifiers == ConsoleModifiers.Alt &&
+            key.Modifiers == ConsoleModifiers.Shift &&
             key.Key == ConsoleKey.Q;
 
     }
