@@ -1,0 +1,60 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v6.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v6.0": {
+      "ReaderConnection/1.0.0": {
+        "dependencies": {
+          "PCSC": "6.1.3",
+          "PCSC.Iso7816": "6.1.3"
+        },
+        "runtime": {
+          "ReaderConnection.dll": {}
+        }
+      },
+      "PCSC/6.1.3": {
+        "runtime": {
+          "lib/net6.0/PCSC.dll": {
+            "assemblyVersion": "6.1.3.0",
+            "fileVersion": "6.1.3.0"
+          }
+        }
+      },
+      "PCSC.Iso7816/6.1.3": {
+        "dependencies": {
+          "PCSC": "6.1.3"
+        },
+        "runtime": {
+          "lib/netstandard2.0/PCSC.Iso7816.dll": {
+            "assemblyVersion": "6.1.3.0",
+            "fileVersion": "6.1.3.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "ReaderConnection/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "PCSC/6.1.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Owbrhae5DAFUgg1gKiRNPjoG3Lr8FdsmlZl6RZnqs+QlWjZQr/2gzY6zYOiBa3L9H1UhMCqxL4I/yvaldelP/g==",
+      "path": "pcsc/6.1.3",
+      "hashPath": "pcsc.6.1.3.nupkg.sha512"
+    },
+    "PCSC.Iso7816/6.1.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fT9Jy+gNOOvZW1Gbyg38gc0pXNxaqachH2ssUvwkCocppQZONyiFrUkrezIokzDnVIZQWAiLEQzlrxFLNVU7mA==",
+      "path": "pcsc.iso7816/6.1.3",
+      "hashPath": "pcsc.iso7816.6.1.3.nupkg.sha512"
+    }
+  }
+}
